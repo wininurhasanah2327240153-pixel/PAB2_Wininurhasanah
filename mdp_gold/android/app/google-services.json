@@ -1,33 +1,14 @@
 {
   "project_info": {
-    "project_number": "215573956763",
-    "firebase_url": "https://daftarbelanja-e31aa-default-rtdb.firebaseio.com",
-    "project_id": "daftarbelanja-e31aa",
-    "storage_bucket": "daftarbelanja-e31aa.firebasestorage.app"
+    "project_number": "266557704586",
+    "firebase_url": "https://mdpgold-5bc55-default-rtdb.firebaseio.com",
+    "project_id": "mdpgold-5bc55",
+    "storage_bucket": "mdpgold-5bc55.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:215573956763:android:90b608174d7db6fd19de3e",
-        "android_client_info": {
-          "package_name": "com.example.daftar_belanja"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDcKBfjWAwwIC5PVJub3hX2HFNdr3s4Sbg"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:215573956763:android:7ed36b61ec1ada7219de3e",
+        "mobilesdk_app_id": "1:266557704586:android:6ae0425294fa117dcaa073",
         "android_client_info": {
           "package_name": "com.example.mdp_gold"
         }
@@ -35,7 +16,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDcKBfjWAwwIC5PVJub3hX2HFNdr3s4Sbg"
+          "current_key": "AIzaSyD9_ZmtIOIyxmhGzKTiufAnDlC8btIP1xg"
         }
       ],
       "services": {
