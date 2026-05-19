@@ -5,7 +5,7 @@ import '../models/note.dart';
 import '../services/note_service.dart';
 
 class NoteDialog extends StatefulWidget {
-  final Note? note; // null = add mode, not null = edit mode
+  final Note? note; // null jika mode tambah, berisi data jika mode edit
 
   const NoteDialog({super.key, this.note});
 
@@ -23,12 +23,11 @@ class _NoteDialogState extends State<NoteDialog> {
   String? _imageBase64;
   bool _isLoading = false;
 
-  bool get _isEditMode => widget.note != null;
-
   @override
   void initState() {
     super.initState();
-    if (_isEditMode) {
+    // Jika mode edit, isi form dengan data yang sudah ada
+    if (widget.note != null) {
       _titleController.text = widget.note!.title;
       _descriptionController.text = widget.note!.description;
       _imageBase64 = widget.note!.imageBase64;
@@ -42,13 +41,14 @@ class _NoteDialogState extends State<NoteDialog> {
     super.dispose();
   }
 
+  // Fungsi untuk memilih gambar dan konversi ke base64
   Future<void> _pickImage() async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 800,
         maxHeight: 800,
-        imageQuality: 70,
+        imageQuality: 50,
       );
 
       if (pickedFile != null) {
@@ -59,61 +59,72 @@ class _NoteDialogState extends State<NoteDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memilih gambar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal memilih gambar: $e')));
       }
     }
   }
 
-  void _removeImage() {
-    setState(() {
-      _imageBase64 = null;
-    });
-  }
-
+  // Fungsi untuk menyimpan note (tambah atau update)
   Future<void> _saveNote() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
 
-    setState(() => _isLoading = true);
-
-    try {
-      final note = Note(
-        id: widget.note?.id,
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim(),
-        imageBase64: _imageBase64,
-        createdAt: widget.note?.createdAt,
-      );
-
-      if (_isEditMode) {
-        await _noteService.updateNote(note);
-      } else {
-        await _noteService.addNote(note);
-      }
-
-      if (mounted) Navigator.of(context).pop();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menyimpan catatan: $e')),
+      try {
+        final note = Note(
+          id: widget.note?.id,
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          imageBase64: _imageBase64,
+          createdAt: widget.note?.createdAt ?? DateTime.now(),
         );
+
+        if (widget.note == null) {
+          // Mode tambah
+          await _noteService.addNote(note);
+        } else {
+          // Mode edit
+          await _noteService.updateNote(note);
+        }
+
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                widget.note == null
+                    ? 'Note berhasil ditambahkan'
+                    : 'Note berhasil diperbarui',
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isEdit = widget.note != null;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
-          maxWidth: 500,
-        ),
+      child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Form(
@@ -123,160 +134,151 @@ class _NoteDialogState extends State<NoteDialog> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Header
-                Row(
-                  children: [
-                    Icon(
-                      _isEditMode ? Icons.edit_note : Icons.note_add,
-                      color: Colors.deepPurple,
-                      size: 28,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _isEditMode ? 'Edit Note' : 'Add Note',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Scrollable content
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Title field
-                        TextFormField(
-                          controller: _titleController,
-                          decoration: InputDecoration(
-                            labelText: 'Title',
-                            hintText: 'Masukkan judul catatan',
-                            prefixIcon: const Icon(Icons.title),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Title tidak boleh kosong';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Description field
-                        TextFormField(
-                          controller: _descriptionController,
-                          decoration: InputDecoration(
-                            labelText: 'Description',
-                            hintText: 'Masukkan deskripsi catatan',
-                            prefixIcon: const Icon(Icons.description),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            alignLabelWithHint: true,
-                          ),
-                          maxLines: 4,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Description tidak boleh kosong';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Image section
-                        if (_imageBase64 != null) ...[
-                          Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.memory(
-                                  base64Decode(_imageBase64!),
-                                  width: double.infinity,
-                                  height: 180,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: Colors.red.shade600,
-                                  child: IconButton(
-                                    icon: const Icon(Icons.close,
-                                        size: 18, color: Colors.white),
-                                    onPressed: _removeImage,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-
-                        // Pick image button
-                        OutlinedButton.icon(
-                          onPressed: _pickImage,
-                          icon: const Icon(Icons.image),
-                          label: Text(
-                            _imageBase64 != null
-                                ? 'Ganti Gambar'
-                                : 'Pilih Gambar',
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                Text(
+                  isEdit ? 'Edit Note' : 'Add Note',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
 
-                // Save button
-                SizedBox(
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _saveNote,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                // Input Title
+                TextFormField(
+                  controller: _titleController,
+                  decoration: InputDecoration(
+                    labelText: 'Title',
+                    hintText: 'Masukkan judul note',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
+                    prefixIcon: const Icon(Icons.title),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Title tidak boleh kosong';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Input Description
+                TextFormField(
+                  controller: _descriptionController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Description',
+                    hintText: 'Masukkan deskripsi note',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: const Icon(Icons.description),
+                    alignLabelWithHint: true,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Description tidak boleh kosong';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Image Picker
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    height: 150,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[400]!),
+                    ),
+                    child: _imageBase64 != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(
+                              base64Decode(_imageBase64!),
+                              fit: BoxFit.cover,
+                              width: double.infinity,
                             ),
                           )
-                        : Text(
-                            _isEditMode ? 'Update' : 'Simpan',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        : const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_photo_alternate,
+                                size: 40,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Tap untuk memilih gambar',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ],
                           ),
                   ),
+                ),
+
+                // Tombol hapus gambar jika sudah ada gambar
+                if (_imageBase64 != null) ...[
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _imageBase64 = null;
+                      });
+                    },
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    label: const Text(
+                      'Hapus Gambar',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 20),
+
+                // Tombol Simpan & Batal
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Batal'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _saveNote,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(isEdit ? 'Update' : 'Simpan'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
