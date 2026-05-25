@@ -7,8 +7,12 @@ environment:
   sdk: ^3.9.2
 
 dependencies:
+  flutter_localizations:   # ← paket localization bawaan Flutter
+    sdk: flutter
   flutter:
     sdk: flutter
+
+  
   firebase_core: ^4.7.0
   cloud_firestore: ^6.3.0
   image_picker: ^1.2.1
@@ -24,3 +28,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true           # ← aktifkan auto-generate dari ARB
+ 

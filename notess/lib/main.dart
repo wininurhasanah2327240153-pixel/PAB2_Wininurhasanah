@@ -5,6 +5,8 @@ import 'screens/note_list_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'services/fcm_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'l10n/app_localizations.dart'; // ← import hasil generate// ← import hasil generate
 
 // Background message handler (must be top-level function)
 @pragma('vm:entry-point')
